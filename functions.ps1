@@ -68,7 +68,38 @@ function Submit-RotaScreenshotForProcessing {
         }
     }
     return $return
-function Get-RotaProcessedScreenshot {}
+}
+function Get-ProcessedRotaScreenshot {
+    param (
+        $processed_uri,
+        $di_key = ( Get-AutomationVariable -Name "di_key" ),
+        $waitBetweenRetries = 5,
+        $headers = @{
+            'Ocp-Apim-Subscription-Key' = $($di_key)
+        }
+    )
+
+    $response = Invoke-WebRequest -Uri $processed_uri -Method Get -Headers $headers
+
+    while (($response.Content | ConvertFrom-json).status -eq 'running') {
+
+        if ($waitBetweenRetries -lt [convert]::ToInt32($response.Headers.'Retry-After', 10)) {
+            [int]$PlatformRetryDuration = [convert]::ToInt32($response.Headers.'Retry-After', 10)
+            Write-Verbose "Retry of $waitBetweenRetries too short, using azure platform Retry-After of $PlatformRetryDuration"
+            $waitBetweenRetries = $PlatformRetryDuration
+        }
+
+        Write-Verbose "Still running, waiting for $waitBetweenRetries seconds"
+        Start-Sleep -Seconds $waitBetweenRetries
+        $response = Invoke-WebRequest -Uri $processed_uri -Method Get -Headers $headers
+    }
+
+    if (($response.Content | ConvertFrom-json).status -ne "succeeded" ) {
+        Write-Error -ErrorId -9 -Message "Something went from, processing didn't meet succeeded"
+    }
+
+    return $response.Content
+}
 function Get-RotaListOfShifts {}
 function Get-RotaCurrentGoogleCalendar {}
 function Add-RotaGoogleCalendarEntry {}
