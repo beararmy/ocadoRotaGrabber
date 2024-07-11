@@ -1,10 +1,10 @@
 function Test-RotaConnections {}
 function Get-RotaScreenshotsForProcessing {
     param (
-        $storage_accountKey = ( Get-AzAutomationVariable -Name storage_accountKey ),
-        $storage_accountName = ( Get-AzAutomationVariable -Name storage_accountName ),
-        $storage_fileshareName = ( Get-AzAutomationVariable -Name storage_fileshareName ),
-        $storage_blobContainerName = ( Get-AzAutomationVariable -Name storage_blobContainerName ),
+        $storage_accountKey = ( Get-AutomationVariable -Name "storage_accountKey" ),
+        $storage_accountName = ( Get-AutomationVariable -Name "storage_accountName" ),
+        $storage_fileshareName = ( Get-AutomationVariable -Name "storage_fileshareName" ),
+        $storage_blobContainerName = ( Get-AutomationVariable -Name "storage_blobContainerName" ),
         $storage_accountContext = ( New-AzStorageContext -StorageAccountName $storage_accountName -StorageAccountKey $storage_accountKey ),
         [bool]$listOnly = $false
     )
