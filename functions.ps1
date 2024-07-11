@@ -32,7 +32,42 @@ function Get-RotaScreenshotsForProcessing {
     }
     return $return
 }
-function Submit-RotaScreenshotForProcessing {}
+function Submit-RotaScreenshotForProcessing {
+    param (
+        $image_uri,
+        $di_key = ( Get-AutomationVariable -Name "di_key" ),
+        $di_endpoint_version = ( Get-AutomationVariable -Name "di_endpoint_version" ),
+        $di_model_name = ( Get-AutomationVariable -Name "di_model_name" ),
+        $di_endpoint_uri = ( Get-AutomationVariable -Name "di_endpoint_uri" ),
+        $headers = @{
+            'Content-Type'              = 'application/json'
+            'Ocp-Apim-Subscription-Key' = $($di_key)
+        },
+        $body = "{'urlSource': '$image_uri'}",
+        $di_uri = $di_endpoint_uri + "/formrecognizer/documentModels/$($di_model_name):analyze?api-version=$di_endpoint_version",
+        $tierF0delay = 8
+    )
+
+    try {
+        $response = Invoke-WebRequest -Uri $di_uri -Method Post -Headers $headers -Body $body
+        if ($response.StatusCode -eq "202") {
+            [bool]$return_ok = $true
+            $return_value = $response.Headers.'Operation-Location'
+            Start-Sleep -Seconds $tierF0delay
+            Write-Verbose "Waiting for $tierF0delay seconds as part of F0 limits."
+        }
+    }
+    catch {
+        $return_ok = $false
+        $return_value = "[Submit-RotaScreenshotForProcessing] did not get http/202, got $($response.StatusCode)"
+    }
+    finally {
+        $return = @{
+            status = $return_ok
+            value  = $return_value
+        }
+    }
+    return $return
 function Get-RotaProcessedScreenshot {}
 function Get-RotaListOfShifts {}
 function Get-RotaCurrentGoogleCalendar {}
