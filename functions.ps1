@@ -156,6 +156,43 @@ function Get-RotaListOfShifts {
     }
     return $object
 }
+function Update-RotaGoogleAuth {
+    param (
+        $goog_current_access_token = ( Get-AutomationVariable -Name goog_current_access_token ),
+        $goog_current_access_token_expiry = ( Get-AutomationVariable -Name goog_current_access_token_expiry ),
+        $goog_client_secret = ( Get-AutomationVariable -Name goog_client_secret ),
+        $goog_login_test_uri = ( Get-AutomationVariable -Name goog_login_test_uri ),
+        $goog_refresh_token = ( Get-AutomationVariable -Name goog_refresh_token ),
+        $goog_client_id = ( Get-AutomationVariable -Name goog_client_id ),
+        $goog_oauth_uri = ( Get-AutomationVariable -Name goog_oauth_uri ),
+        $headers = @{
+            Authorization = "Bearer $goog_current_access_token"
+        },
+        $refreshTokenParams = @{
+            client_id     = $goog_client_id
+            client_secret = $goog_client_secret
+            refresh_token = $goog_refresh_token
+            grant_type    = "refresh_token"
+        }
+    )
+    try {
+        if ((Get-Date $goog_current_access_token_expiry) -gt (Get-Date)) {
+            $result = (Invoke-WebRequest -Method Get -Headers $headers -Uri $goog_login_test_uri).StatusCode
+            Write-Output "Not reached refresh expiry. Tried to get calendars, got http/$result"
+        }
+        else {
+            $result = (Invoke-WebRequest -Method Get -Headers $headers -Uri $goog_login_test_uri).StatusCode
+            Write-Output "Refresh token has already expired. Tried to get calendars, got http/$result"
+        }
+    }
+    catch {
+        Write-Output "Google token was expired, attempting to refresh."
+        $token = Invoke-RestMethod -Uri $goog_oauth_uri -Method Post -Body $refreshTokenParams
+        Set-AutomationVariable -Name goog_current_access_token -Value $token.access_token
+        $expires_datetime = (Get-Date).AddSeconds($($token.expires_in))
+        Set-AutomationVariable -Name goog_current_access_token_expiry -Value (Get-Date $expires_datetime -Format "yyyy-MM-dd HH:mm:ss")
+    }
+}
 function Get-RotaCurrentGoogleCalendar {}
 function Add-RotaGoogleCalendarEntry {}
 function Invoke-RotaCleanup {}
