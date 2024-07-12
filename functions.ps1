@@ -157,6 +157,8 @@ function Get-RotaListOfShifts {
     return $object
 }
 function Update-RotaGoogleAuth {
+    #todo: this is ugly and takes far too long.
+    #todo: if I trust the timeout, why even test it?
     param (
         $goog_current_access_token = ( Get-AutomationVariable -Name goog_current_access_token ),
         $goog_current_access_token_expiry = ( Get-AutomationVariable -Name goog_current_access_token_expiry ),
@@ -177,8 +179,9 @@ function Update-RotaGoogleAuth {
     )
     try {
         if ((Get-Date $goog_current_access_token_expiry) -gt (Get-Date)) {
-            $result = (Invoke-WebRequest -Method Get -Headers $headers -Uri $goog_login_test_uri).StatusCode
-            Write-Output "Not reached refresh expiry. Tried to get calendars, got http/$result"
+            # $result = (Invoke-WebRequest -Method Get -Headers $headers -Uri $goog_login_test_uri).StatusCode
+            Write-Verbose "Refresh token still unexpired, doing nothing"
+            return $goog_current_access_token
         }
         else {
             $result = (Invoke-WebRequest -Method Get -Headers $headers -Uri $goog_login_test_uri).StatusCode
@@ -191,6 +194,7 @@ function Update-RotaGoogleAuth {
         Set-AutomationVariable -Name goog_current_access_token -Value $token.access_token
         $expires_datetime = (Get-Date).AddSeconds($($token.expires_in))
         Set-AutomationVariable -Name goog_current_access_token_expiry -Value (Get-Date $expires_datetime -Format "yyyy-MM-dd HH:mm:ss")
+        return $($token.access_token)
     }
 }
 function Get-RotaCurrentGoogleCalendar {}
