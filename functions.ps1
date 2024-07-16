@@ -198,5 +198,41 @@ function Update-RotaGoogleAuth {
     }
 }
 function Get-RotaCurrentGoogleCalendar {}
-function Add-RotaGoogleCalendarEntry {}
+function Add-RotaGoogleCalendarEntry {
+    param (
+        $goog_current_access_token = ( Get-AutomationVariable -Name goog_current_access_token ),
+        $goog_current_access_token_expiry = ( Get-AutomationVariable -Name goog_current_access_token_expiry ),
+        $goog_noah_calendar_id = ( Get-AutomationVariable -Name goog_noah_calendar_id ),
+        [ValidateNotNull()]$shift_start,
+        [ValidateNotNull()]$shift_end,
+        $headers = @{
+            Authorization = "Bearer $goog_current_access_token"
+        }
+    )
+
+    if ((Get-Date($goog_current_access_token_expiry)) -gt (Get-Date)) {
+        Write-Verbose "token has expired, renewing"
+        $goog_current_access_token = Update-RotaGoogleAuth
+    }
+
+    # this block inserts a calendar entry.
+    $json_calendar_entry = "{
+            `"calendarId`": `"$goog_noah_calendar_id`",
+            `"description`": `"Tee hee hee, get to work.`",
+            `"end`": {
+                `"dateTime`": `"$shift_end`",
+                `"timeZone`": `"Europe/London`"
+            },
+            `"summary`": `"LGV Driving`",
+            `"start`": {
+                `"dateTime`": `"$shift_start`",
+                `"timeZone`": `"Europe/London`"
+            },
+            `"location`": `"Ocado Andover, Walworth Business Park, 89 Flinders Cl, Andover SP10 5AF, UK`",
+            `"transparency`": `"transparent`"
+        }"
+    $new_calendar_insert_uri = "https://www.googleapis.com/calendar/v3/calendars/$goog_noah_calendar_id/events"
+    $newEntry = Invoke-RestMethod -Method Post -Uri $new_calendar_insert_uri -Headers $headers -Body $json_calendar_entry
+    return $newEntry.status
+}
 function Invoke-RotaCleanup {}
