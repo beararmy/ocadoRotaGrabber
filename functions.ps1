@@ -178,7 +178,7 @@ function Update-RotaGoogleAuth {
         }
     )
     try {
-        if ((Get-Date $goog_current_access_token_expiry) -gt (Get-Date)) {
+        if ((Get-Date($goog_current_access_token_expiry)) -gt (Get-Date)) {
             # $result = (Invoke-WebRequest -Method Get -Headers $headers -Uri $goog_login_test_uri).StatusCode
             Write-Verbose "Refresh token still unexpired, doing nothing"
             return $goog_current_access_token
