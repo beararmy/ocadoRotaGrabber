@@ -197,7 +197,38 @@ function Update-RotaGoogleAuth {
         return $($token.access_token)
     }
 }
-function Get-RotaCurrentGoogleCalendar {}
+function Get-RotaCurrentGoogleCalendarForDay {
+    #todo: this should be filtered on the google side rather than return and filter.
+    param (
+        $goog_current_access_token = ( Get-AutomationVariable -Name goog_current_access_token ),
+        $goog_current_access_token_expiry = ( Get-AutomationVariable -Name goog_current_access_token_expiry ),
+        $goog_noah_calendar_id = ( Get-AutomationVariable -Name goog_noah_calendar_id ),
+        [ValidateNotNull()]$goog_query_date,
+        $headers = @{
+            Authorization = "Bearer $goog_current_access_token"
+        }
+    )
+
+    if ((Get-Date($goog_current_access_token_expiry)) -gt (Get-Date)) {
+        Write-Verbose "token has expired, renewing"
+        $goog_current_access_token = Update-RotaGoogleAuth
+    }
+
+    # get the calendar entry for $goog_query_date
+    $calendar_uri = "https://www.googleapis.com/calendar/v3/calendars/$goog_noah_calendar_id/events"
+    $obj = Invoke-RestMethod -Method Get -Uri $calendar_uri -Headers $headers
+    $goog_query_date = Get-Date($goog_query_date)
+    $goog_query_date_end = (Get-Date($goog_query_date)).AddHours(24)
+    Write-Verbose "Filtering entries to between $goog_query_date and $goog_query_date_end"
+    $return = $obj.items | Where-Object { $_.start.dateTime -ge $goog_query_date -and $_.end.dateTime -le $goog_query_date_end }
+
+    if ($null -ne $return) {
+        return $return
+    }
+    else {
+        return "nothing_found"
+    }
+}
 function Add-RotaGoogleCalendarEntry {
     param (
         $goog_current_access_token = ( Get-AutomationVariable -Name goog_current_access_token ),
