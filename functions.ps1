@@ -266,4 +266,29 @@ function Add-RotaGoogleCalendarEntry {
     $newEntry = Invoke-RestMethod -Method Post -Uri $new_calendar_insert_uri -Headers $headers -Body $json_calendar_entry
     return $newEntry.status
 }
-function Invoke-RotaCleanup {}
+function Invoke-RotaCleanup {
+    param (
+        $storage_accountKey = ( Get-AutomationVariable -Name "storage_accountKey" ),
+        $storage_accountName = ( Get-AutomationVariable -Name "storage_accountName" ),
+        $storage_fileshareName = ( Get-AutomationVariable -Name "storage_fileshareName" ),
+        $storage_blobContainerName = ( Get-AutomationVariable -Name "storage_blobContainerName" ),
+        $storage_accountContext = ( New-AzStorageContext -StorageAccountName $storage_accountName -StorageAccountKey $storage_accountKey ),
+        [bool]$pretend_to_do_the_needful = $false
+    )
+    try {
+        if ($pretend_to_do_the_needful -eq $false) {
+            Write-Verbose "LIVE mode, below are the files for deletion:"
+            Get-AzStorageBlob -Container $storage_blobContainerName -Context $storage_accountContext | Remove-AzStorageBlob
+            Get-AzStorageFile -ShareName $storage_fileshareName -context $storage_accountContext | Remove-AzStorageFile
+        }
+        else {
+            Write-Verbose "PRETEND mode, below are the files for deletion:"
+            (Get-AzStorageBlob -Container $storage_blobContainerName -Context $storage_accountContext).Name
+            (Get-AzStorageFile -ShareName $storage_fileshareName -context $storage_accountContext).Name
+        }
+    }
+    catch {
+        Write-Error "Failed to tidy up"
+        return $false
+    }
+}
