@@ -178,7 +178,7 @@ function Update-RotaGoogleAuth {
         }
     )
     try {
-        if ((Get-Date($goog_current_access_token_expiry)) -gt (Get-Date)) {
+        if ((Get-Date($goog_current_access_token_expiry)) -lt (Get-Date)) {
             # $result = (Invoke-WebRequest -Method Get -Headers $headers -Uri $goog_login_test_uri).StatusCode
             Write-Verbose "Refresh token still unexpired, doing nothing"
             return $goog_current_access_token
@@ -209,7 +209,7 @@ function Get-RotaCurrentGoogleCalendarForDay {
         }
     )
 
-    if ((Get-Date($goog_current_access_token_expiry)) -gt (Get-Date)) {
+    if ((Get-Date($goog_current_access_token_expiry)) -lt (Get-Date)) {
         Write-Verbose "token has expired, renewing"
         $goog_current_access_token = Update-RotaGoogleAuth
     }
@@ -241,7 +241,7 @@ function Remove-RotaCurrentGoogleCalendarForDay {
         $just_remove_them = $false
     )
 
-    if ((Get-Date($goog_current_access_token_expiry)) -gt (Get-Date)) {
+    if ((Get-Date($goog_current_access_token_expiry)) -lt (Get-Date)) {
         Write-Verbose "token has expired, renewing"
         $goog_current_access_token = Update-RotaGoogleAuth
     }
@@ -271,7 +271,7 @@ function Add-RotaGoogleCalendarEntry {
         }
     )
 
-    if ((Get-Date($goog_current_access_token_expiry)) -gt (Get-Date)) {
+    if ((Get-Date($goog_current_access_token_expiry)) -lt (Get-Date)) {
         Write-Verbose "token has expired, renewing"
         $goog_current_access_token = Update-RotaGoogleAuth
     }
@@ -308,7 +308,7 @@ function Update-RotaGoogleCalendarEntry {
         $existing_goog_event_id
     )
 
-    if ((Get-Date($goog_current_access_token_expiry)) -gt (Get-Date)) {
+    if ((Get-Date($goog_current_access_token_expiry)) -lt (Get-Date)) {
         Write-Verbose "token has expired, renewing"
         $goog_current_access_token = Update-RotaGoogleAuth
     }
