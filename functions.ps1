@@ -229,6 +229,36 @@ function Get-RotaCurrentGoogleCalendarForDay {
         return "nothing_found"
     }
 }
+function Remove-RotaCurrentGoogleCalendarForDay {
+    param (
+        $goog_current_access_token = ( Get-AutomationVariable -Name goog_current_access_token ),
+        $goog_current_access_token_expiry = ( Get-AutomationVariable -Name goog_current_access_token_expiry ),
+        $goog_noah_calendar_id = ( Get-AutomationVariable -Name goog_noah_calendar_id ),
+        [ValidateNotNull()]$goog_query_date,
+        $headers = @{
+            Authorization = "Bearer $goog_current_access_token"
+        },
+        $just_remove_them = $false
+    )
+
+    if ((Get-Date($goog_current_access_token_expiry)) -gt (Get-Date)) {
+        Write-Verbose "token has expired, renewing"
+        $goog_current_access_token = Update-RotaGoogleAuth
+    }
+
+    # get the calendar entry for $goog_query_date
+    $calendar_uri = "https://www.googleapis.com/calendar/v3/calendars/$goog_noah_calendar_id/events"
+    $goog_query_date = Get-Date($goog_query_date)
+    $goog_query_date_end = (Get-Date($goog_query_date)).AddHours(24)
+    $obj = Invoke-RestMethod -Method Get -Uri $calendar_uri -Headers $headers
+    $results = $obj.items | Where-Object { $_.start.dateTime -ge $goog_query_date -and $_.end.dateTime -le $goog_query_date_end }
+    foreach ($result in $results) {
+        $query_date = $($result.start.dateTime)
+        $goog_event_id = $($result.id)
+        $calendar_uri = "https://www.googleapis.com/calendar/v3/calendars/$goog_noah_calendar_id/events/$goog_event_id"
+        Invoke-RestMethod -Method Delete -Uri $calendar_uri -Headers $headers
+    }
+}
 function Add-RotaGoogleCalendarEntry {
     param (
         $goog_current_access_token = ( Get-AutomationVariable -Name goog_current_access_token ),
