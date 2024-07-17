@@ -215,7 +215,7 @@ function Get-RotaCurrentGoogleCalendarForDay {
     }
 
     # get the calendar entry for $goog_query_date
-    $calendar_uri = "https://www.googleapis.com/calendar/v3/calendars/$goog_noah_calendar_id/events"
+    $calendar_uri = "https://www.googleapis.com/calendar/v3/calendars/$goog_noah_calendar_id/events?maxResults=2500"
     $obj = Invoke-RestMethod -Method Get -Uri $calendar_uri -Headers $headers
     $goog_query_date = Get-Date($goog_query_date)
     $goog_query_date_end = (Get-Date($goog_query_date)).AddHours(24)
