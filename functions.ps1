@@ -293,8 +293,7 @@ function Add-RotaGoogleCalendarEntry {
             `"transparency`": `"transparent`"
         }"
     $new_calendar_insert_uri = "https://www.googleapis.com/calendar/v3/calendars/$goog_noah_calendar_id/events"
-    $newEntry = Invoke-RestMethod -Method Post -Uri $new_calendar_insert_uri -Headers $headers -Body $json_calendar_entry
-    return $newEntry.status
+    Invoke-RestMethod -Method Post -Uri $new_calendar_insert_uri -Headers $headers -Body $json_calendar_entry
 function Update-RotaGoogleCalendarEntry {
     param (
         $goog_current_access_token = ( Get-AutomationVariable -Name goog_current_access_token ),
