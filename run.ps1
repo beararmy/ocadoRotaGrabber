@@ -421,3 +421,8 @@ foreach ($screenshot in $screenshots) {
         }
     }
 }
+
+Write-Output "Cleaning up leftover files from File and Blob storage"
+Invoke-RotaCleanup
+
+Write-Output "That's all, folks!"
