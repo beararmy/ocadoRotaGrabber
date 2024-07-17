@@ -9,6 +9,7 @@ catch {
 $AzureContext = Set-AzContext -SubscriptionName $AzureConnection.Subscription -DefaultProfile $AzureConnection
 Write-Output "Using system-assigned managed identity"
 # Above is authentication... that works... don't touch it.
+
 function Test-RotaConnections {}
 function Get-RotaScreenshotsForProcessing {
     param (
@@ -26,12 +27,8 @@ function Get-RotaScreenshotsForProcessing {
             Start-AzStorageBlobCopy -Context $storage_accountContext -SrcShareName $storage_fileshareName -DestContext $storage_accountContext -DestContainer $storage_blobContainerName -DestBlob $file -SrcFilePath $file -Force | Out-Null
         }
 
-Write-Output "Step1: gather ye' pearls (files to process, now moved into blob."
-$jest = Get-RotaScreenshotsForProcessing
-Write-Output "Step1: COMPLETED, succuessful or not, I'm just a Write-Host"
         $blobs = Get-AzStorageBlob -Container $storage_blobContainerName -Context $storage_accountContext
 
-Write-Output "Step5: refresh google creds"
         if ($blobs.Count -gt 0) {
             $return = $blobs.BlobBaseClient.Uri.AbsoluteUri
         }
@@ -377,43 +374,50 @@ function Invoke-RotaCleanup {
     }
 }
 
+Write-Output "Gathering Screenshots for processing"
+$screenshots = Get-RotaScreenshotsForProcessing
+
+Write-Output "Updating Google authentication"
 $nest = Update-RotaGoogleAuth
-Write-Output "Step5: COMPLETED, succuessful or not, I'm just a Write-Host"
+$nest
 
-foreach ($screenshot in $jest) {
-    Write-Output "Step2: Submitting a file (currently hardcoded)"
+foreach ($screenshot in $screenshots) {
+    Write-Verbose "---- LOOP: screenshot in screenshots ----"
+    Write-Output "Submitting a screenshot to neural model"
     $zest = Submit-RotaScreenshotForProcessing $screenshot
-    Write-Output "Step2: COMPLETED, succuessful or not, I'm just a Write-Host"
 
-    Write-Output "Step3: wait for azure to confirm DI has done it's jazz all over my file."
+    Write-Output "Acquiring AI processed screenshot"
     $fest = Get-ProcessedRotaScreenshot $($zest.value)
-    Write-Output "Step3: COMPLETED, succuessful or not, I'm just a Write-Host"
 
-    #todo, here we need to crunch output into a google cal.
-
-    Write-Output "Step4: Crunch up the file and hopefully get a nice table."
+    Write-Output "Locally processing screenshot"
     $shifts = Get-RotaListOfShifts -di_processed_json $fest
-    # $rest | % { New-Object PSObject -Property $_ } | ft -autosize
-    Write-Output "Step4: COMPLETED, succuessful or not, I'm just a Write-Host"
 
     foreach ($shift in $shifts) {
-        Write-Verbose "-----"
+        Write-Verbose "---- LOOP: shift in shifts ----"
         if ($($shift.shift_working) -eq $False) {
-            Write-Verbose "SHIFT $(Get-Date($shift.date) -Format "yyyy-MM-dd") marked as non working."
+            Write-Verbose "SHIFT $(Get-Date($shift.date) -Format "yyyy-MM-dd") marked as non working"
+            $check_today = Get-RotaCurrentGoogleCalendarForDay -goog_query_date $(Get-Date($shift.date) -Format "yyyy-MM-dd")
+            if ($check_today -ne "nothing_found") {
+                Write-Output "SHIFT $(Get-Date($shift.date) -Format "yyyy-MM-dd") not found, not expected, doing nothing"
+            }
+            else {
+                Write-Output "SHIFT $(Get-Date($shift.date) -Format "yyyy-MM-dd") found, but not expected, removing"
+                Remove-RotaCurrentGoogleCalendarForDay -goog_query_date $(Get-Date($shift.date) -Format "yyyy-MM-dd")
+            }
         }
         else {
             Write-Verbose "SHIFT $(Get-Date($shift.date) -Format "yyyy-MM-dd") marked as working."
             $start = $(Get-Date($shift.shift_start) -Format "yyyy-MM-ddTHH:mm:ss")
             $end = $(Get-Date($shift.shift_end) -Format "yyyy-MM-ddTHH:mm:ss")
-            Add-RotaGoogleCalendarEntry -shift_start $start -shift_end $end
-            #todo: need to check and delete previous calendar entries.
+            $check_today = Get-RotaCurrentGoogleCalendarForDay -goog_query_date $(Get-Date($shift.date) -Format "yyyy-MM-dd")
+            if ($check_today -eq "nothing_found") {
+                Write-Output "SHIFT $(Get-Date($shift.date) -Format "yyyy-MM-dd") expected, but not found, adding a shift for $start to $end"
+                Add-RotaGoogleCalendarEntry -shift_start $start -shift_end $end
+            }
+            else {
+                Write-Output "SHIFT $(Get-Date($shift.date) -Format "yyyy-MM-dd") expected, but shift already found, updating existing for $start to $end"
+                Update-RotaGoogleCalendarEntry -shift_start $start -shift_end $end -existing_goog_event_id $($check_today.id)
+            }
         }
     }
-
 }
-
-# Write-Output "Step7: "
-# $breast = Get-RotaCurrentGoogleCalendarForDay -goog_query_date "2024-07-22"
-# $breast
-# Write-Output "Step7: COMPLETED, succuessful or not, Im just a Write-Host"
-# Write-Output "End of tests."
